@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Action button minimum width -->
+    <dimen name="action_button_min_width">56dip</dimen>
+    <!-- Action bar default height -->
+    <dimen name="action_bar_default_height">48dip</dimen>
+
+</resources>
