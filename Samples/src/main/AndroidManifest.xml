@@ -23,7 +23,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".ButtonsActivity" />
-        <activity android:name=".ButtonsSherlockActivity" />
+        <activity android:name=".ButtonsSherlockActivity" android:theme="@style/Theme.Sherlock.Light.DarkActionBar" />
         <activity android:name=".ViewPagerListActivity" />
     </application>
 

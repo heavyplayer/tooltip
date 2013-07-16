@@ -534,8 +534,10 @@ public class Tooltip extends ViewGroup {
         mBalloonView.layout(balloonLeft, balloonTop, balloonLeft + balloonWidth, balloonTop + balloonHeight);
     }
 
+    // TODO: Cache these values.
     private int getArrowSideSize() {
-        return dpToPx(ARROW_SIDE_SIZE_DP);
+        int px = dpToPx(ARROW_SIDE_SIZE_DP);
+        return (px & 1) == 0 ? px : px -1; // Ensure it's even.
     }
 
     private int getRoundedCornersRadii() {
@@ -551,9 +553,8 @@ public class Tooltip extends ViewGroup {
     }
 
     private int dpToPx(int dpValue) {
-        return Math.round(
-                TypedValue.applyDimension(
-                        TypedValue.COMPLEX_UNIT_DIP, dpValue, mActivity.getResources().getDisplayMetrics()));
+        return (int)TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP, dpValue, mActivity.getResources().getDisplayMetrics());
     }
 
     @SuppressLint("NewApi")
@@ -665,7 +666,6 @@ public class Tooltip extends ViewGroup {
                 mPath.lineTo(otherSideSize / 2, getArrowSideSize());
                 mPath.lineTo(otherSideSize, 0);
 
-
                 mPath.close();
             }
         }
@@ -698,18 +698,18 @@ public class Tooltip extends ViewGroup {
             ensurePaint();
             ensurePath();
 
-            int count = canvas.save(Canvas.MATRIX_SAVE_FLAG);
+            int count = canvas.save();
             switch(mGravity) {
                 case Gravity.BOTTOM:
-                    canvas.rotate(180, canvas.getWidth() / 2, canvas.getHeight() / 2);
+                    canvas.rotate(180, getOtherSideSize() / 2, getArrowSideSize() / 2);
                     break;
 
                 case Gravity.LEFT:
-                    canvas.rotate(-90, canvas.getHeight() / 2, canvas.getHeight() / 2);
+                    canvas.rotate(-90, getOtherSideSize() / 2, getOtherSideSize() / 2);
                     break;
 
                 case Gravity.RIGHT:
-                    canvas.rotate(90, canvas.getWidth() / 2, canvas.getWidth() / 2);
+                    canvas.rotate(90, getArrowSideSize() / 2, getArrowSideSize() / 2);
                     break;
 
                 default:
