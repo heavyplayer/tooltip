@@ -391,8 +391,10 @@ public class Tooltip extends ViewGroup {
     private void calculateWindowPosition() {
         calculateDisplaySize();
 
+        // Measure specs don't really matter as both childs have a fixed width/height.
         int widthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x, MeasureSpec.AT_MOST);
         int heightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y, MeasureSpec.AT_MOST);
+
         measureChild(mArrowView, widthMeasureSpec, heightMeasureSpec);
         measureChild(mBalloonView, widthMeasureSpec, heightMeasureSpec);
 
@@ -407,13 +409,16 @@ public class Tooltip extends ViewGroup {
             case Gravity.BOTTOM:
                 mWindowPosition.x = trim(
                         mTarget.centerX() - balloonWidth / 2,
-                        mTarget.left - arrowWidth - getRoundedCornersRadii(),
-                        mTarget.right - arrowWidth - getRoundedCornersRadii());
+                        0,
+                        mDisplaySize.x - balloonWidth);
                 break;
 
             case Gravity.LEFT:
             case Gravity.RIGHT:
-                mWindowPosition.y = trim(mTarget.centerY() - balloonHeight / 2, 0, mDisplaySize.y - balloonHeight);
+                mWindowPosition.y = trim(
+                        mTarget.centerY() - balloonHeight / 2,
+                        0,
+                        mDisplaySize.y - balloonHeight);
                 break;
         }
 
