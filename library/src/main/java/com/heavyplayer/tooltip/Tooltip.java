@@ -24,6 +24,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -45,11 +46,13 @@ public class Tooltip extends ViewGroup {
 
     private Rect mTarget;
     private View mTargetView;
-    private Integer mTargetX, mTargetY, mTargetWidth, mTargetHeight;
-    private android.view.MenuItem mTargetMenuItem;
-    private com.actionbarsherlock.view.MenuItem mTargetMenuItemSherlock;
+    private Integer mTargetX, mTargetY;
+    private android.view.Menu mMenu;
+    private com.actionbarsherlock.view.Menu mMenuSherlock;
+    private int mMenuItemId;
 
-    private Integer mGravity;
+    private int mGravity = Gravity.TOP;
+    private Point mDisplaySize = new Point();
     private Point mWindowPosition = new Point();
 
     private ArrowView mArrowView;
@@ -60,6 +63,7 @@ public class Tooltip extends ViewGroup {
     private int mTextColor = Color.BLACK;
 
     private OnShowListener mOnShowListener;
+    private OnClickListener mOnClickListener;
     private OnDismissListener mOnDismissListener;
 
     public Tooltip(Activity activity) {
@@ -71,6 +75,9 @@ public class Tooltip extends ViewGroup {
     }
 
     public void show() {
+        // Make sure there are no views (in case show() is called twice).
+        removeAllViews();
+
         // Create and add inner views.
         mArrowView = new ArrowView(mActivity);
         addView(mArrowView, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
@@ -78,10 +85,13 @@ public class Tooltip extends ViewGroup {
         addView(mBalloonView, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
         // TODO: Configure the views here instead of having the values read from super (this).
 
-        setOnClickListener(new OnClickListener() {
+        setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                dismiss();
+                if(mOnClickListener != null)
+                    mOnClickListener.onClick(Tooltip.this);
+                else
+                    dismiss();
             }
         });
 
@@ -110,11 +120,8 @@ public class Tooltip extends ViewGroup {
                     mVisible = false;
                 }
 
-                if(mTargetView != null) {
-                    if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN)
-                        mTargetView.setHasTransientState(true);
+                if(mTargetView != null)
                     mTargetView.getViewTreeObserver().addOnPreDrawListener(UPDATE_WINDOW_LISTENER);
-                }
 
                 if(mOnShowListener != null)
                     mOnShowListener.onShow(Tooltip.this);
@@ -123,11 +130,8 @@ public class Tooltip extends ViewGroup {
     }
 
     public void dismiss() {
-        if(mTargetView != null) {
-            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN)
-                mTargetView.setHasTransientState(false);
+        if(mTargetView != null)
             mTargetView.getViewTreeObserver().removeOnPreDrawListener(UPDATE_WINDOW_LISTENER);
-        }
 
         mWindowManager.removeView(this);
 
@@ -147,10 +151,12 @@ public class Tooltip extends ViewGroup {
 
                     if(mVisible && visible) {
                         mWindowManager.updateViewLayout(Tooltip.this, mWindowLayoutParams);
-                    } else if(mVisible && !visible) {
+                    }
+                    else if(mVisible && !visible) {
                         setVisibility(View.GONE);
                         mVisible = false;
-                    } else if(!mVisible && visible) {
+                    }
+                    else if(!mVisible && visible) {
                         setVisibility(View.VISIBLE);
                         mVisible = true;
                     }
@@ -161,8 +167,6 @@ public class Tooltip extends ViewGroup {
 
     /**
      * Set the view which is targeted by this tutorial.
-     *
-     * @param targetView The tutorial target
      */
     public void setTarget(View targetView) {
         mTargetView = targetView;
@@ -181,17 +185,10 @@ public class Tooltip extends ViewGroup {
 
     /**
      * Set the coordinates which are targeted by this tutorial.
-     *
-     * @param targetX the X center coordinate
-     * @param targetY the Y center coordinate
-     * @param targetWidth the width of the target area
-     * @param targetHeight the height of the target area
      */
     public void setTarget(int targetX, int targetY, int targetWidth, int targetHeight) {
         mTargetX = targetX;
         mTargetY = targetY;
-        mTargetWidth = targetWidth;
-        mTargetHeight = targetHeight;
     }
 
     /**
@@ -199,16 +196,18 @@ public class Tooltip extends ViewGroup {
      *
      * Only visible Action Bar menu items are supported. When used with collapsed
      * menu items, or the old bottom menus, the behaviour is undefined.
-     *
-     * @param targetMenuItem the menu item
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    public void setTarget(android.view.MenuItem targetMenuItem) {
-        View actionView = targetMenuItem.getActionView();
-        if(actionView != null)
+    public void setTarget(android.view.Menu menu, int menuItemId) {
+        android.view.MenuItem item = menu.findItem(menuItemId);
+        View actionView = item.getActionView();
+        if(actionView != null) {
             setTarget(actionView);
-        else
-            mTargetMenuItem = targetMenuItem;
+        }
+        else {
+            mMenu = menu;
+            mMenuItemId = menuItemId;
+        }
     }
 
     /**
@@ -216,15 +215,17 @@ public class Tooltip extends ViewGroup {
      *
      * Only visible Action Bar menu items are supported. When used with collapsed
      * menu items, or the old bottom menus, the behaviour is undefined.
-     *
-     * @param targetMenuItemSherlock the menu item
      */
-    public void setTarget(com.actionbarsherlock.view.MenuItem targetMenuItemSherlock) {
-        View actionView = targetMenuItemSherlock.getActionView();
-        if(actionView != null)
+    public void setTarget(com.actionbarsherlock.view.Menu menu, int menuItemId) {
+        com.actionbarsherlock.view.MenuItem item = menu.findItem(menuItemId);
+        View actionView = item.getActionView();
+        if(actionView != null) {
             setTarget(actionView);
-        else
-            mTargetMenuItemSherlock = targetMenuItemSherlock;
+        }
+        else {
+            mMenuSherlock = menu;
+            mMenuItemId = menuItemId;
+        }
     }
 
     /**
@@ -256,6 +257,13 @@ public class Tooltip extends ViewGroup {
     }
 
     /**
+     * Set the listener to be invoked when the tooltip is shown. By default, when a tooltip is tapped, it's dismissed.
+     */
+    public void setOnClickListener(OnClickListener listener) {
+        mOnClickListener = listener;
+    }
+
+    /**
      * Set the listener to be invoked when the tooltip is dismissed.
      */
     public void setOnDismissListener(OnDismissListener listener) {
@@ -269,18 +277,11 @@ public class Tooltip extends ViewGroup {
         if(mTargetX != null && mTargetY != null) {
             mTarget = new Rect(mTargetX, mTargetY, mTargetX, mTargetY);
 
-            if(mTargetWidth != null && mTargetHeight != null) {
-                mTarget.left = mTargetX - (int)(mTargetWidth / 2f);
-                mTarget.top = mTargetY - (int)(mTargetHeight / 2f);
-                mTarget.right = mTargetX + (int)(mTargetWidth / 2f);
-                mTarget.bottom = mTargetY + (int)(mTargetHeight / 2f);
-            }
-
             if(onTargetExtractedListener != null) {
-                Point displaySize = getDisplaySize();
+                calculateDisplaySize();
                 onTargetExtractedListener.onTargetExtracted(
                         true,
-                        ((mTarget.right >= 0 || mTarget.left <= displaySize.x) && (mTarget.top >= 0 || mTarget.bottom <= displaySize.y)),
+                        ((mTarget.right >= 0 || mTarget.left <= mDisplaySize.x) && (mTarget.top >= 0 || mTarget.bottom <= mDisplaySize.y)),
                         !mTarget.equals(previousTarget)
                 );
             }
@@ -297,65 +298,82 @@ public class Tooltip extends ViewGroup {
                 );
             }
         }
-        else if(mTargetMenuItem != null) {
-            final View actionView = mLayoutInflater.inflate(R.layout.ab_placeholder_item, new LinearLayout(mActivity), false);
-            if(actionView != null) {
-                mTargetMenuItem.setActionView(actionView);
-                actionView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        locateTargetByView(actionView);
+        else if(mMenu != null) {
+            final android.view.MenuItem item = mMenu.findItem(mMenuItemId);
+            if(item != null) {
+                final ViewGroup actionView = getActionView(item.getIcon());
 
-                        if(onTargetExtractedListener != null)
-                            onTargetExtractedListener.onTargetExtracted(
-                                    false,
-                                    actionView.getLocalVisibleRect(new Rect()) && actionView.isShown(),
-                                    !mTarget.equals(previousTarget)
-                            );
+                if(actionView != null) {
+                    item.setActionView(actionView);
+                    actionView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            locateTargetByView(actionView);
 
-                        mTargetMenuItem.setActionView(null);
-                    }
-                });
+                            if(onTargetExtractedListener != null)
+                                onTargetExtractedListener.onTargetExtracted(
+                                        false,
+                                        actionView.getLocalVisibleRect(new Rect()) && actionView.isShown(),
+                                        !mTarget.equals(previousTarget)
+                                );
+
+                            item.setActionView(null);
+                        }
+                    });
+                }
             }
         }
-        else if(mTargetMenuItemSherlock != null) {
-            final View actionView = mLayoutInflater.inflate(R.layout.ab_placeholder_item, new LinearLayout(mActivity), false);
-            mTargetMenuItemSherlock.setActionView(actionView);
-            if(actionView != null) {
-                actionView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        locateTargetByView(actionView);
+        else if(mMenuSherlock != null) {
+            final com.actionbarsherlock.view.MenuItem item = mMenuSherlock.findItem(mMenuItemId);
+            if(item != null) {
+                final ViewGroup actionView = getActionView(item.getIcon());
 
-                        if(onTargetExtractedListener != null)
-                            onTargetExtractedListener.onTargetExtracted(
-                                    false,
-                                    actionView.getLocalVisibleRect(new Rect()) && actionView.isShown(),
-                                    !mTarget.equals(previousTarget)
-                            );
+                item.setActionView(actionView);
+                if(actionView != null) {
+                    actionView.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            locateTargetByView(actionView);
 
-                        mTargetMenuItemSherlock.setActionView(null);
-                    }
-                });
+                            if(onTargetExtractedListener != null)
+                                onTargetExtractedListener.onTargetExtracted(
+                                        false,
+                                        actionView.getLocalVisibleRect(new Rect()) && actionView.isShown(),
+                                        !mTarget.equals(previousTarget)
+                                );
+
+                            item.setActionView(null);
+                        }
+                    });
+                }
             }
         }
-        else {
-            if(onTargetExtractedListener != null)
-                onTargetExtractedListener.onTargetExtracted(true, true, previousTarget != null);
+        else if(onTargetExtractedListener != null) {
+            onTargetExtractedListener.onTargetExtracted(true, false, previousTarget != null);
         }
+    }
+
+    private ViewGroup getActionView(Drawable icon) {
+        ViewGroup actionView = (ViewGroup)mLayoutInflater.inflate(R.layout.ab_placeholder_item, new LinearLayout(mActivity), false);
+        if(actionView != null) {
+            ImageView iconView = (ImageView)actionView.getChildAt(0);
+            if(iconView != null)
+                iconView.setImageDrawable(icon);
+        }
+        return actionView;
     }
 
     private void calculateGravity() {
         if(mTarget == null)
-            throw new IllegalStateException("The target must be set.");
+            throw new IllegalStateException("You must set some target.");
 
-        Point displaySize = getDisplaySize();
+        calculateDisplaySize();
 
         // Multiply each space by the opposite action to uniform the scale.
-        int leftSpace = mTarget.left * displaySize.y;
-        int topSpace = mTarget.top * displaySize.x;
-        int rightSpace = (displaySize.x - mTarget.right) * displaySize.y;
-        int bottomSpace = (displaySize.y - mTarget.bottom) * displaySize.x;
+        int leftSpace = mTarget.left * mDisplaySize.y;
+        int topSpace = mTarget.top * mDisplaySize.x;
+        int rightSpace = (mDisplaySize.x - mTarget.right) * mDisplaySize.y;
+        int bottomSpace = (mDisplaySize.y - mTarget.bottom) * mDisplaySize.x;
 
         int mostSpacious = Math.max(leftSpace, Math.max(topSpace, Math.max(rightSpace, bottomSpace)));
 
@@ -371,14 +389,10 @@ public class Tooltip extends ViewGroup {
     }
 
     private void calculateWindowPosition() {
-        if(mArrowView == null || mBalloonView == null)
-            throw new IllegalStateException("Both child views need to be created.");
-        if(mGravity == null)
-            throw new IllegalStateException("Gravity must be calculated");
+        calculateDisplaySize();
 
-        Point displaySize = getDisplaySize();
-        int widthMeasureSpec = MeasureSpec.makeMeasureSpec(displaySize.x, MeasureSpec.AT_MOST);
-        int heightMeasureSpec = MeasureSpec.makeMeasureSpec(displaySize.y, MeasureSpec.AT_MOST);
+        int widthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x, MeasureSpec.AT_MOST);
+        int heightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y, MeasureSpec.AT_MOST);
         measureChild(mArrowView, widthMeasureSpec, heightMeasureSpec);
         measureChild(mBalloonView, widthMeasureSpec, heightMeasureSpec);
 
@@ -399,26 +413,26 @@ public class Tooltip extends ViewGroup {
 
             case Gravity.LEFT:
             case Gravity.RIGHT:
-                mWindowPosition.y = trim(mTarget.centerY() - balloonHeight / 2, 0, displaySize.y - balloonHeight);
+                mWindowPosition.y = trim(mTarget.centerY() - balloonHeight / 2, 0, mDisplaySize.y - balloonHeight);
                 break;
         }
 
         // Set individual properties.
         switch(mGravity) {
             case Gravity.TOP:
-                mWindowPosition.y = mTarget.top - balloonHeight - arrowHeight / 2;
+                mWindowPosition.y = mTarget.top - balloonHeight - Math.min(arrowHeight / 2, mTarget.height() / 2);
                 break;
 
             case Gravity.BOTTOM:
-                mWindowPosition.y = mTarget.bottom - arrowHeight / 2;
+                mWindowPosition.y = mTarget.bottom - Math.min(arrowHeight / 2, mTarget.height() / 2);
                 break;
 
             case Gravity.LEFT:
-                mWindowPosition.x = mTarget.left - balloonWidth - arrowWidth / 2;
+                mWindowPosition.x = mTarget.left - balloonWidth - Math.min(arrowWidth / 2, mTarget.width() / 2);
                 break;
 
             case Gravity.RIGHT:
-                mWindowPosition.x = mTarget.right - arrowWidth / 2;
+                mWindowPosition.x = mTarget.right - Math.min(arrowWidth / 2, mTarget.width() / 2);
                 break;
         }
     }
@@ -449,6 +463,8 @@ public class Tooltip extends ViewGroup {
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        calculateDisplaySize();
+
         int width = right - left;
         int height = bottom - top;
 
@@ -462,14 +478,12 @@ public class Tooltip extends ViewGroup {
         int balloonLeft = 0;
         int balloonTop = 0;
 
-        Point displaySize = getDisplaySize();
-
         // Set common properties.
         switch(mGravity) {
             case Gravity.TOP:
             case Gravity.BOTTOM:
                 arrowLeft = trim(
-                        mTarget.centerX() - trim(mWindowPosition.x, 0, displaySize.x - width) - arrowWidth / 2,
+                        mTarget.centerX() - trim(mWindowPosition.x, 0, mDisplaySize.x - width) - arrowWidth / 2,
                         getRoundedCornersRadii(),
                         getWidth() - getRoundedCornersRadii() - arrowWidth);
                 balloonLeft = 0;
@@ -478,7 +492,7 @@ public class Tooltip extends ViewGroup {
             case Gravity.LEFT:
             case Gravity.RIGHT:
                 arrowTop = trim(
-                        mTarget.centerY() - trim(mWindowPosition.y, 0, displaySize.y - height) - arrowHeight / 2,
+                        mTarget.centerY() - trim(mWindowPosition.y, 0, mDisplaySize.y - height) - arrowHeight / 2,
                         getRoundedCornersRadii(),
                         getHeight() - arrowHeight - getRoundedCornersRadii());
                 balloonTop = 0;
@@ -514,8 +528,8 @@ public class Tooltip extends ViewGroup {
             arrowLeft += xDiff;
             balloonLeft += xDiff;
         }
-        else if(mWindowPosition.x > displaySize.x - width / 2 + arrowWidth / 2) {
-            int xDiff = mWindowPosition.x - (displaySize.x - width / 2 + arrowWidth / 2);
+        else if(mWindowPosition.x > mDisplaySize.x - width / 2 + arrowWidth / 2) {
+            int xDiff = mWindowPosition.x - (mDisplaySize.x - width / 2 + arrowWidth / 2);
             arrowLeft += xDiff;
             balloonLeft += xDiff;
         }
@@ -524,8 +538,8 @@ public class Tooltip extends ViewGroup {
             arrowTop += yDiff;
             balloonTop += yDiff;
         }
-        else if(mWindowPosition.y > displaySize.y - height / 2 + arrowHeight / 2) {
-            int yDiff = mWindowPosition.y - (displaySize.y - height / 2 + arrowHeight / 2);
+        else if(mWindowPosition.y > mDisplaySize.y - height / 2 + arrowHeight / 2) {
+            int yDiff = mWindowPosition.y - (mDisplaySize.y - height / 2 + arrowHeight / 2);
             arrowTop += yDiff;
             balloonTop += yDiff;
         }
@@ -559,19 +573,15 @@ public class Tooltip extends ViewGroup {
 
     @SuppressLint("NewApi")
     @SuppressWarnings("deprecation")
-    private Point getDisplaySize() {
-        Point displaySize = new Point();
+    private void calculateDisplaySize() {
         Display display = mWindowManager.getDefaultDisplay();
-
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-            display.getSize(displaySize);
+            display.getSize(mDisplaySize);
         }
         else {
-            displaySize.x = display.getWidth();
-            displaySize.y = display.getHeight();
+            mDisplaySize.x = display.getWidth();
+            mDisplaySize.y = display.getHeight();
         }
-
-        return displaySize;
     }
 
     private void locateTargetByView(View view) {
@@ -594,6 +604,10 @@ public class Tooltip extends ViewGroup {
         public void onShow(Tooltip tooltip);
     }
 
+    public interface OnClickListener {
+        public void onClick(Tooltip tooltip);
+    }
+
     public interface OnDismissListener {
         public void onDismiss(Tooltip tooltip);
     }
@@ -606,7 +620,6 @@ public class Tooltip extends ViewGroup {
             setTextColor(mTextColor);
             setTextSize(TypedValue.COMPLEX_UNIT_SP, TEXT_SIZE_SP);
             setTypeface(null, Typeface.BOLD);
-            setIncludeFontPadding(false);
             setBackground(new ShapeDrawable(new ColoredRoundRectShape(getRoundedCornersRadii())));
             setPadding(getPaddingHorizontal(), getPaddingVertical(), getPaddingHorizontal(), getPaddingVertical());
         }
