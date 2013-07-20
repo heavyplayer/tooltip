@@ -16,6 +16,7 @@ public class ButtonsActivity extends Activity {
     public static final String LOG_TAG = ButtonsActivity.class.getSimpleName();
 
     String mText = "A simple test tooltip";
+    Menu mMenu;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -47,6 +48,7 @@ public class ButtonsActivity extends Activity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.test, menu);
+        mMenu = menu;
         return true;
     }
 
@@ -67,7 +69,7 @@ public class ButtonsActivity extends Activity {
             tooltip.setColor(Color.RED);
             tooltip.setText(mText);
             tooltip.setTextColor(Color.WHITE);
-            tooltip.setTarget(item);
+            tooltip.setTarget(mMenu, item.getItemId());
             tooltip.show();
         }
 
