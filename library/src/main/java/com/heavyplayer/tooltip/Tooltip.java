@@ -409,16 +409,16 @@ public class Tooltip extends ViewGroup {
             case Gravity.BOTTOM:
                 mWindowPosition.x = trim(
                         mTarget.centerX() - balloonWidth / 2,
-                        0,
-                        mDisplaySize.x - balloonWidth);
+                        mTarget.left - arrowWidth - getRoundedCornersRadii(),
+                        mTarget.right + arrowWidth + getRoundedCornersRadii());
                 break;
 
             case Gravity.LEFT:
             case Gravity.RIGHT:
                 mWindowPosition.y = trim(
                         mTarget.centerY() - balloonHeight / 2,
-                        0,
-                        mDisplaySize.y - balloonHeight);
+                        mTarget.top - arrowHeight - getRoundedCornersRadii(),
+                        mTarget.bottom + arrowHeight - getRoundedCornersRadii());
                 break;
         }
 
