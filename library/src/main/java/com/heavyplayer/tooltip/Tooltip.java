@@ -391,7 +391,7 @@ public class Tooltip extends ViewGroup {
     private void calculateWindowPosition() {
         calculateDisplaySize();
 
-        // Measure specs don't really matter as both childs have a fixed width/height.
+        // Measure specs don't really matter as both children have a fixed width/height.
         int widthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x, MeasureSpec.AT_MOST);
         int heightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y, MeasureSpec.AT_MOST);
 
@@ -407,18 +407,12 @@ public class Tooltip extends ViewGroup {
         switch(mGravity) {
             case Gravity.TOP:
             case Gravity.BOTTOM:
-                mWindowPosition.x = trim(
-                        mTarget.centerX() - balloonWidth / 2,
-                        0,
-                        mDisplaySize.x - balloonWidth);
+                mWindowPosition.x = mTarget.centerX() - balloonWidth / 2;
                 break;
 
             case Gravity.LEFT:
             case Gravity.RIGHT:
-                mWindowPosition.y = trim(
-                        mTarget.centerY() - balloonHeight / 2,
-                        0,
-                        mDisplaySize.y - balloonHeight);
+                mWindowPosition.y = mTarget.centerY() - balloonHeight / 2;
                 break;
         }
 
@@ -528,23 +522,23 @@ public class Tooltip extends ViewGroup {
         }
 
         // Window Manager never lays out the content outside the screen. Account for that.
-        if(mWindowPosition.x < -(width - width / 2 + arrowWidth / 2)) {
-            int xDiff = mWindowPosition.x - -(width - width / 2 + arrowWidth / 2);
+        if(mWindowPosition.x < -(width - width / 2)) {
+            int xDiff = mWindowPosition.x - -(width - width / 2);
             arrowLeft += xDiff;
             balloonLeft += xDiff;
         }
-        else if(mWindowPosition.x > mDisplaySize.x - width / 2 + arrowWidth / 2) {
-            int xDiff = mWindowPosition.x - (mDisplaySize.x - width / 2 + arrowWidth / 2);
+        else if(mWindowPosition.x > mDisplaySize.x - width / 2) {
+            int xDiff = mWindowPosition.x - (mDisplaySize.x - width / 2);
             arrowLeft += xDiff;
             balloonLeft += xDiff;
         }
-        if(mWindowPosition.y < -(height - height / 2 + arrowHeight / 2)) {
-            int yDiff = mWindowPosition.y - -(height - height / 2 + arrowHeight / 2);
+        if(mWindowPosition.y < -(height - height / 2)) {
+            int yDiff = mWindowPosition.y - -(height - height / 2);
             arrowTop += yDiff;
             balloonTop += yDiff;
         }
-        else if(mWindowPosition.y > mDisplaySize.y - height / 2 + arrowHeight / 2) {
-            int yDiff = mWindowPosition.y - (mDisplaySize.y - height / 2 + arrowHeight / 2);
+        else if(mWindowPosition.y > mDisplaySize.y - height / 2) {
+            int yDiff = mWindowPosition.y - (mDisplaySize.y - height / 2);
             arrowTop += yDiff;
             balloonTop += yDiff;
         }
