@@ -1,3 +1,3 @@
 [submodule "tooltip/libraries/ActionBarSherlock"]
 	path = tooltip/libraries/ActionBarSherlock
-	url = https://github.com/heavyplayer/ActionBarSherlock.git
+	url = git@github.com:heavyplayer/ActionBarSherlock.git
