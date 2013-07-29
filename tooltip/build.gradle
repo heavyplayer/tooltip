@@ -10,11 +10,11 @@ buildscript {
 apply plugin: 'android-library'
 
 dependencies {
-    compile 'com.android.support:support-v4:13.0.0'
+    compile 'com.android.support:support-v4:18.0.+'
     compile project(':Todoist:libraries:ActionBarSherlock:actionbarsherlock')
 }
 
 android {
-    compileSdkVersion 17
+    compileSdkVersion 18
     buildToolsVersion "18"
 }
