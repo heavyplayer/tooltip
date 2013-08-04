@@ -391,15 +391,17 @@ public class Tooltip extends ViewGroup {
     private void calculateWindowPosition() {
         calculateDisplaySize();
 
-        // Measure specs don't really matter as both children have a fixed width/height.
-        int widthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x, MeasureSpec.AT_MOST);
-        int heightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y, MeasureSpec.AT_MOST);
-
-        measureChild(mArrowView, widthMeasureSpec, heightMeasureSpec);
-        measureChild(mBalloonView, widthMeasureSpec, heightMeasureSpec);
-
+        // Measure arrow.
+        int arrowWidthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x, MeasureSpec.AT_MOST);
+        int arrowHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y, MeasureSpec.AT_MOST);
+        measureChild(mArrowView, arrowWidthMeasureSpec, arrowHeightMeasureSpec);
         int arrowWidth = mArrowView.getMeasuredWidth();
         int arrowHeight = mArrowView.getMeasuredHeight();
+
+        // Measure balloon (taking into account the arrow's size).
+        int balloonWidthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x - arrowWidth, MeasureSpec.AT_MOST);
+        int balloonHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y - arrowHeight, MeasureSpec.AT_MOST);
+        measureChild(mBalloonView, balloonWidthMeasureSpec, balloonHeightMeasureSpec);
         int balloonWidth = mBalloonView.getMeasuredWidth();
         int balloonHeight = mBalloonView.getMeasuredHeight();
 
@@ -522,27 +524,40 @@ public class Tooltip extends ViewGroup {
         }
 
         // Window Manager never lays out the content outside the screen. Account for that.
-        if(mWindowPosition.x < -(width - width / 2)) {
-            int xDiff = mWindowPosition.x - -(width - width / 2);
+        int relevantWidth = 0;
+        int relevantHeight = 0;
+
+        if(mGravity == Gravity.TOP || mGravity == Gravity.BOTTOM) {
+            relevantWidth = arrowWidth - getRoundedCornersRadii();
+            relevantHeight = mGravity == Gravity.TOP ? 0 : height;
+        }
+        else if(mGravity == Gravity.LEFT || mGravity == Gravity.RIGHT) {
+            relevantWidth = mGravity == Gravity.LEFT ? 0 : width;
+            relevantHeight = arrowHeight - getRoundedCornersRadii();
+        }
+
+        if(mTarget.right < relevantWidth) {
+            int xDiff = mTarget.right - relevantWidth;
             arrowLeft += xDiff;
             balloonLeft += xDiff;
         }
-        else if(mWindowPosition.x > mDisplaySize.x - width / 2) {
-            int xDiff = mWindowPosition.x - (mDisplaySize.x - width / 2);
+        else if(mTarget.left > mDisplaySize.x - relevantWidth) {
+            int xDiff = mTarget.left - (mDisplaySize.x - relevantWidth);
             arrowLeft += xDiff;
             balloonLeft += xDiff;
         }
-        if(mWindowPosition.y < -(height - height / 2)) {
-            int yDiff = mWindowPosition.y - -(height - height / 2);
+        if(mTarget.bottom < relevantHeight) {
+            int yDiff = mTarget.bottom - relevantHeight;
             arrowTop += yDiff;
             balloonTop += yDiff;
         }
-        else if(mWindowPosition.y > mDisplaySize.y - height / 2) {
-            int yDiff = mWindowPosition.y - (mDisplaySize.y - height / 2);
+        else if(mTarget.top > mDisplaySize.y - relevantHeight) {
+            int yDiff = mTarget.top - (mDisplaySize.y - relevantHeight);
             arrowTop += yDiff;
             balloonTop += yDiff;
         }
 
+        // Lay out the views.
         mArrowView.layout(arrowLeft, arrowTop, arrowLeft + arrowWidth, arrowTop + arrowHeight);
         mBalloonView.layout(balloonLeft, balloonTop, balloonLeft + balloonWidth, balloonTop + balloonHeight);
     }
@@ -619,8 +634,10 @@ public class Tooltip extends ViewGroup {
             setTextColor(mTextColor);
             setTextSize(TypedValue.COMPLEX_UNIT_SP, TEXT_SIZE_SP);
             setTypeface(null, Typeface.BOLD);
-            setBackground(new ShapeDrawable(new ColoredRoundRectShape(getRoundedCornersRadii())));
+            setSingleLine(false);
+            setGravity(Gravity.CENTER);
             setPadding(getPaddingHorizontal(), getPaddingVertical(), getPaddingHorizontal(), getPaddingVertical());
+            setBackground(new ShapeDrawable(new ColoredRoundRectShape(getRoundedCornersRadii())));
         }
 
         @SuppressWarnings("deprecation")
