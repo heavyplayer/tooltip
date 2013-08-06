@@ -17,7 +17,6 @@ import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.RoundRectShape;
 import android.os.Build;
 import android.util.TypedValue;
-import android.view.Display;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -391,55 +390,53 @@ public class Tooltip extends ViewGroup {
     private void calculateWindowPosition() {
         calculateDisplaySize();
 
-        // Measure arrow.
-        int arrowWidthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x, MeasureSpec.AT_MOST);
-        int arrowHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y, MeasureSpec.AT_MOST);
-        measureChild(mArrowView, arrowWidthMeasureSpec, arrowHeightMeasureSpec);
+        ensureChildrenMeasured();
         int arrowWidth = mArrowView.getMeasuredWidth();
-        int arrowHeight = mArrowView.getMeasuredHeight();
-
-        // Measure balloon (taking into account the arrow's size).
-        int balloonWidthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x - arrowWidth, MeasureSpec.AT_MOST);
-        int balloonHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y - arrowHeight, MeasureSpec.AT_MOST);
-        measureChild(mBalloonView, balloonWidthMeasureSpec, balloonHeightMeasureSpec);
+        int arrowHeight = mArrowView.getMeasuredHeight();;
         int balloonWidth = mBalloonView.getMeasuredWidth();
         int balloonHeight = mBalloonView.getMeasuredHeight();
+
+        int targetCenterX = getTargetVisibleCenterX();
+        int targetCenterY = getTargetVisibleCenterY();
+        int targetWidth = getTargetVisibleWidth();
+        int targetHeight = getTargetVisibleHeight();
 
         // Set common properties.
         switch(mGravity) {
             case Gravity.TOP:
             case Gravity.BOTTOM:
-                mWindowPosition.x = mTarget.centerX() - balloonWidth / 2;
+                mWindowPosition.x = targetCenterX - balloonWidth / 2;
                 break;
 
             case Gravity.LEFT:
             case Gravity.RIGHT:
-                mWindowPosition.y = mTarget.centerY() - balloonHeight / 2;
+                mWindowPosition.y = targetCenterY - balloonHeight / 2;
                 break;
         }
 
         // Set individual properties.
         switch(mGravity) {
             case Gravity.TOP:
-                mWindowPosition.y = mTarget.top - balloonHeight - Math.min(arrowHeight / 2, mTarget.height() / 2);
+                mWindowPosition.y = mTarget.top - balloonHeight - Math.min(arrowHeight / 2, targetHeight / 2);
                 break;
 
             case Gravity.BOTTOM:
-                mWindowPosition.y = mTarget.bottom - Math.min(arrowHeight / 2, mTarget.height() / 2);
+                mWindowPosition.y = mTarget.bottom - Math.min(arrowHeight / 2, targetHeight / 2);
                 break;
 
             case Gravity.LEFT:
-                mWindowPosition.x = mTarget.left - balloonWidth - Math.min(arrowWidth / 2, mTarget.width() / 2);
+                mWindowPosition.x = mTarget.left - balloonWidth - Math.min(arrowWidth / 2, targetWidth / 2);
                 break;
 
             case Gravity.RIGHT:
-                mWindowPosition.x = mTarget.right - Math.min(arrowWidth / 2, mTarget.width() / 2);
+                mWindowPosition.x = mTarget.right - Math.min(arrowWidth / 2, targetWidth / 2);
                 break;
         }
     }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        ensureChildrenMeasured();
         int arrowWidth = mArrowView.getMeasuredWidth();
         int arrowHeight = mArrowView.getMeasuredHeight();
         int balloonWidth = mBalloonView.getMeasuredWidth();
@@ -469,97 +466,63 @@ public class Tooltip extends ViewGroup {
         int width = right - left;
         int height = bottom - top;
 
+        ensureChildrenMeasured();
         int arrowWidth = mArrowView.getMeasuredWidth();
         int arrowHeight = mArrowView.getMeasuredHeight();
         int balloonWidth = mBalloonView.getMeasuredWidth();
         int balloonHeight = mBalloonView.getMeasuredHeight();
 
-        int arrowLeft = 0;
-        int arrowTop = 0;
-        int balloonLeft = 0;
-        int balloonTop = 0;
+        int arrowLeft = trim(0, mWindowPosition.x + width - mDisplaySize.x, mWindowPosition.x);
+        int arrowTop = trim(0, mWindowPosition.y + height - mDisplaySize.y, mWindowPosition.y);
+        int balloonLeft = trim(0, mWindowPosition.x + width - mDisplaySize.x, mWindowPosition.x);
+        int balloonTop = trim(0, mWindowPosition.y + height - mDisplaySize.y, mWindowPosition.y);
 
-        // Set common properties.
+        // Position arrow and balloon with respect to each other.
         switch(mGravity) {
             case Gravity.TOP:
-            case Gravity.BOTTOM:
-                arrowLeft = trim(
-                        mTarget.centerX() - trim(mWindowPosition.x, 0, mDisplaySize.x - width) - arrowWidth / 2,
-                        getRoundedCornersRadii(),
-                        getWidth() - getRoundedCornersRadii() - arrowWidth);
-                balloonLeft = 0;
-                break;
-
-            case Gravity.LEFT:
-            case Gravity.RIGHT:
-                arrowTop = trim(
-                        mTarget.centerY() - trim(mWindowPosition.y, 0, mDisplaySize.y - height) - arrowHeight / 2,
-                        getRoundedCornersRadii(),
-                        getHeight() - arrowHeight - getRoundedCornersRadii());
-                balloonTop = 0;
-                break;
-        }
-
-        // Set individual properties.
-        switch(mGravity) {
-            case Gravity.TOP:
-                arrowTop = balloonHeight;
-                balloonTop = 0;
+                arrowLeft += width / 2 - arrowWidth / 2;
+                arrowTop += balloonHeight;
                 break;
 
             case Gravity.BOTTOM:
-                arrowTop = 0;
-                balloonTop = arrowHeight;
+                arrowLeft += width / 2 - arrowWidth / 2;
+                balloonTop += arrowHeight;
                 break;
 
             case Gravity.LEFT:
-                arrowLeft = balloonWidth;
-                balloonTop = 0;
+                arrowLeft += balloonWidth;
+                arrowTop += height / 2 - arrowHeight / 2;
                 break;
 
             case Gravity.RIGHT:
-                arrowLeft = 0;
-                balloonLeft = arrowWidth;
+                arrowTop += height / 2 - arrowHeight / 2;
+                balloonLeft += arrowWidth;
                 break;
-        }
-
-        // Window Manager never lays out the content outside the screen. Account for that.
-        int relevantWidth = 0;
-        int relevantHeight = 0;
-
-        if(mGravity == Gravity.TOP || mGravity == Gravity.BOTTOM) {
-            relevantWidth = arrowWidth - getRoundedCornersRadii();
-            relevantHeight = mGravity == Gravity.TOP ? 0 : height;
-        }
-        else if(mGravity == Gravity.LEFT || mGravity == Gravity.RIGHT) {
-            relevantWidth = mGravity == Gravity.LEFT ? 0 : width;
-            relevantHeight = arrowHeight - getRoundedCornersRadii();
-        }
-
-        if(mTarget.right < relevantWidth) {
-            int xDiff = mTarget.right - relevantWidth;
-            arrowLeft += xDiff;
-            balloonLeft += xDiff;
-        }
-        else if(mTarget.left > mDisplaySize.x - relevantWidth) {
-            int xDiff = mTarget.left - (mDisplaySize.x - relevantWidth);
-            arrowLeft += xDiff;
-            balloonLeft += xDiff;
-        }
-        if(mTarget.bottom < relevantHeight) {
-            int yDiff = mTarget.bottom - relevantHeight;
-            arrowTop += yDiff;
-            balloonTop += yDiff;
-        }
-        else if(mTarget.top > mDisplaySize.y - relevantHeight) {
-            int yDiff = mTarget.top - (mDisplaySize.y - relevantHeight);
-            arrowTop += yDiff;
-            balloonTop += yDiff;
         }
 
         // Lay out the views.
         mArrowView.layout(arrowLeft, arrowTop, arrowLeft + arrowWidth, arrowTop + arrowHeight);
         mBalloonView.layout(balloonLeft, balloonTop, balloonLeft + balloonWidth, balloonTop + balloonHeight);
+    }
+
+    private void ensureChildrenMeasured() {
+        int arrowWidth = mArrowView.getMeasuredWidth();
+        int arrowHeight = mArrowView.getMeasuredHeight();
+
+        if(arrowWidth == 0 || arrowHeight == 0) {
+            int arrowWidthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x, MeasureSpec.AT_MOST);
+            int arrowHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y, MeasureSpec.AT_MOST);
+            measureChild(mArrowView, arrowWidthMeasureSpec, arrowHeightMeasureSpec);
+        }
+
+        int balloonWidth = mBalloonView.getMeasuredWidth();
+        int balloonHeight = mBalloonView.getMeasuredHeight();
+
+        if(balloonWidth == 0 || balloonHeight == 0) {
+            int balloonWidthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x - arrowWidth, MeasureSpec.AT_MOST);
+            int balloonHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y - arrowHeight, MeasureSpec.AT_MOST);
+            measureChild(mBalloonView, balloonWidthMeasureSpec, balloonHeightMeasureSpec);
+        }
     }
 
     // TODO: Cache these values.
@@ -580,6 +543,22 @@ public class Tooltip extends ViewGroup {
         return dpToPx(PADDING_HORIZONTAL_DP);
     }
 
+    private int getTargetVisibleCenterX() {
+        return (trim(mTarget.right, 0, mDisplaySize.x) + trim(mTarget.left, 0, mDisplaySize.x)) >> 1;
+    }
+
+    private int getTargetVisibleCenterY() {
+        return (trim(mTarget.bottom, 0, mDisplaySize.y) + trim(mTarget.top, 0, mDisplaySize.y)) >> 1;
+    }
+
+    private int getTargetVisibleWidth() {
+        return trim(mTarget.right, 0, mDisplaySize.x) - trim(mTarget.left, 0, mDisplaySize.x);
+    }
+
+    private int getTargetVisibleHeight() {
+        return trim(mTarget.bottom, 0, mDisplaySize.y) - trim(mTarget.top, 0, mDisplaySize.y);
+    }
+
     private int dpToPx(int dpValue) {
         return (int)TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP, dpValue, mActivity.getResources().getDisplayMetrics());
@@ -588,19 +567,16 @@ public class Tooltip extends ViewGroup {
     @SuppressLint("NewApi")
     @SuppressWarnings("deprecation")
     private void calculateDisplaySize() {
-        Display display = mWindowManager.getDefaultDisplay();
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.HONEYCOMB_MR2) {
-            display.getSize(mDisplaySize);
-        }
-        else {
-            mDisplaySize.x = display.getWidth();
-            mDisplaySize.y = display.getHeight();
-        }
+        View decorView = mActivity.getWindow().getDecorView();
+        int[] position = new int[2];
+        decorView.getLocationOnScreen(position);
+
+        mDisplaySize.x = decorView.getWidth() - position[0];
+        mDisplaySize.y = decorView.getHeight() - position[1];
     }
 
     private void locateTargetByView(View view) {
         int[] position = new int[2];
-
         view.getLocationOnScreen(position);
 
         mTarget = new Rect();
