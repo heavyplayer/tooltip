@@ -23,6 +23,8 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.WindowManager;
+import android.view.animation.Animation;
+import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -132,6 +134,8 @@ public class Tooltip extends ViewGroup {
         if(mTargetView != null)
             mTargetView.getViewTreeObserver().removeOnPreDrawListener(UPDATE_WINDOW_LISTENER);
 
+        mWindowLayoutParams.windowAnimations = R.style.TooltipAnimation;
+        mWindowManager.updateViewLayout(this, mWindowLayoutParams);
         mWindowManager.removeView(this);
 
         if(mOnDismissListener != null)
@@ -145,34 +149,40 @@ public class Tooltip extends ViewGroup {
                 if(changed) {
                     calculateWindowPosition();
 
-                    mWindowLayoutParams.x = mWindowPosition.x;
-                    mWindowLayoutParams.y = mWindowPosition.y;
-
-                    if(mVisible && visible) {
-                        mWindowManager.updateViewLayout(Tooltip.this, mWindowLayoutParams);
-                    }
-                    else if(mVisible && !visible) {
+                    if(mVisible && !visible) {
+                        mWindowLayoutParams.windowAnimations = R.style.TooltipAnimation;
                         setVisibility(View.GONE);
                         mVisible = false;
                     }
                     else if(!mVisible && visible) {
+                        // Don't use the WindowManager's animation since it doesn't onLayout() until it ends.
+                        Animation inAnim = AnimationUtils.loadAnimation(mActivity, android.R.anim.fade_in);
+                        mArrowView.startAnimation(inAnim);
+                        mBalloonView.startAnimation(inAnim);
+
+                        mWindowLayoutParams.windowAnimations = 0;
                         setVisibility(View.VISIBLE);
                         mVisible = true;
                     }
+
+                    mWindowLayoutParams.x = mWindowPosition.x;
+                    mWindowLayoutParams.y = mWindowPosition.y;
+
+                    mWindowManager.updateViewLayout(Tooltip.this, mWindowLayoutParams);
                 }
             }
         });
     }
 
     /**
-     * Set the view which is targeted by this tutorial.
+     * Set the view which is targeted by this tooltip.
      */
     public void setTarget(View targetView) {
         mTargetView = targetView;
     }
 
     /**
-     * Set the coordinates which are targeted by this tutorial.
+     * Set the coordinates which are targeted by this tooltip.
      *
      * @param targetX the X center coordinate
      * @param targetY the Y center coordinate
@@ -183,15 +193,7 @@ public class Tooltip extends ViewGroup {
     }
 
     /**
-     * Set the coordinates which are targeted by this tutorial.
-     */
-    public void setTarget(int targetX, int targetY, int targetWidth, int targetHeight) {
-        mTargetX = targetX;
-        mTargetY = targetY;
-    }
-
-    /**
-     * Set the menu item targeted by this tutorial.
+     * Set the menu item targeted by this tooltip.
      *
      * Only visible Action Bar menu items are supported. When used with collapsed
      * menu items, or the old bottom menus, the behaviour is undefined.
@@ -210,7 +212,7 @@ public class Tooltip extends ViewGroup {
     }
 
     /**
-     * Set the menu item targeted by this tutorial.
+     * Set the menu item targeted by this tooltip.
      *
      * Only visible Action Bar menu items are supported. When used with collapsed
      * menu items, or the old bottom menus, the behaviour is undefined.
@@ -392,7 +394,7 @@ public class Tooltip extends ViewGroup {
 
         ensureChildrenMeasured();
         int arrowWidth = mArrowView.getMeasuredWidth();
-        int arrowHeight = mArrowView.getMeasuredHeight();;
+        int arrowHeight = mArrowView.getMeasuredHeight();
         int balloonWidth = mBalloonView.getMeasuredWidth();
         int balloonHeight = mBalloonView.getMeasuredHeight();
 
@@ -472,10 +474,11 @@ public class Tooltip extends ViewGroup {
         int balloonWidth = mBalloonView.getMeasuredWidth();
         int balloonHeight = mBalloonView.getMeasuredHeight();
 
+        // Set the positions.
         int arrowLeft = trim(0, mWindowPosition.x + width - mDisplaySize.x, mWindowPosition.x);
         int arrowTop = trim(0, mWindowPosition.y + height - mDisplaySize.y, mWindowPosition.y);
-        int balloonLeft = trim(0, mWindowPosition.x + width - mDisplaySize.x, mWindowPosition.x);
-        int balloonTop = trim(0, mWindowPosition.y + height - mDisplaySize.y, mWindowPosition.y);
+        int balloonLeft = arrowLeft;
+        int balloonTop = arrowTop;
 
         // Position arrow and balloon with respect to each other.
         switch(mGravity) {
@@ -497,6 +500,25 @@ public class Tooltip extends ViewGroup {
             case Gravity.RIGHT:
                 arrowTop += height / 2 - arrowHeight / 2;
                 balloonLeft += arrowWidth;
+                break;
+        }
+
+        // Don't let the balloon be out of the screen when there's no need.
+        switch(mGravity) {
+            case Gravity.TOP:
+            case Gravity.BOTTOM:
+                if(balloonLeft < 0)
+                    balloonLeft = Math.min(0, balloonLeft + (balloonWidth / 2 - arrowWidth + getRoundedCornersRadii()));
+                else if(mWindowPosition.x > mDisplaySize.x - balloonWidth)
+                    balloonLeft = Math.max(0, (mWindowPosition.x - (balloonWidth / 2 - arrowWidth + getRoundedCornersRadii())) - (mDisplaySize.x - balloonWidth));
+                break;
+
+            case Gravity.LEFT:
+            case Gravity.RIGHT:
+                if(balloonTop < 0)
+                    balloonTop = Math.min(0, balloonTop + (balloonHeight / 2 - arrowHeight + getRoundedCornersRadii()));
+                else if(mWindowPosition.y > mDisplaySize.y - balloonHeight)
+                    balloonTop = Math.max(0, (mWindowPosition.y - (balloonHeight / 2 - arrowHeight + getRoundedCornersRadii())) - (mDisplaySize.y - balloonHeight));
                 break;
         }
 
@@ -577,7 +599,7 @@ public class Tooltip extends ViewGroup {
 
     private void locateTargetByView(View view) {
         int[] position = new int[2];
-        view.getLocationOnScreen(position);
+        view.getLocationInWindow(position);
 
         mTarget = new Rect();
         mTarget.left = position[0];
