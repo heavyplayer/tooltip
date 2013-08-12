@@ -56,6 +56,9 @@ public class Tooltip extends ViewGroup {
     private Point mDisplaySize = new Point();
     private Point mWindowPosition = new Point();
 
+    private boolean mIsShown = false;
+    private boolean mIsDismissed = false;
+
     private ArrowView mArrowView;
     private BalloonView mBalloonView;
 
@@ -76,6 +79,9 @@ public class Tooltip extends ViewGroup {
     }
 
     public void show() {
+        // If show(), it's no longer dismissed.
+        mIsDismissed = false;
+
         // Make sure there are no views (in case show() is called twice).
         removeAllViews();
 
@@ -99,6 +105,9 @@ public class Tooltip extends ViewGroup {
         locateTarget(new OnTargetExtractedListener() {
             @Override
             public void onTargetExtracted(boolean immediate, boolean visible, boolean changed) {
+                if(mIsDismissed)
+                    return;
+
                 calculateGravity();
                 calculateWindowPosition();
 
@@ -126,20 +135,28 @@ public class Tooltip extends ViewGroup {
 
                 if(mOnShowListener != null)
                     mOnShowListener.onShow(Tooltip.this);
+
+                mIsShown = true;
             }
         });
     }
 
     public void dismiss() {
-        if(mTargetView != null)
-            mTargetView.getViewTreeObserver().removeOnPreDrawListener(UPDATE_WINDOW_LISTENER);
+        if(mIsShown) {
+            if(mTargetView != null)
+                mTargetView.getViewTreeObserver().removeOnPreDrawListener(UPDATE_WINDOW_LISTENER);
 
-        mWindowLayoutParams.windowAnimations = R.style.TooltipAnimation;
-        mWindowManager.updateViewLayout(this, mWindowLayoutParams);
-        mWindowManager.removeView(this);
+            mWindowLayoutParams.windowAnimations = R.style.TooltipAnimation;
+            mWindowManager.updateViewLayout(this, mWindowLayoutParams);
+            mWindowManager.removeView(this);
 
-        if(mOnDismissListener != null)
-            mOnDismissListener.onDismiss(this);
+            if(mOnDismissListener != null)
+                mOnDismissListener.onDismiss(this);
+
+            mIsShown = false;
+        }
+
+        mIsDismissed = true;
     }
 
     private void updateWindow() {
