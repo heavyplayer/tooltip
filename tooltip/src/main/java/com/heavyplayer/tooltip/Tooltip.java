@@ -136,10 +136,10 @@ public class Tooltip extends ViewGroup {
                 if(mTargetView != null)
                     mTargetView.getViewTreeObserver().addOnPreDrawListener(UPDATE_WINDOW_LISTENER);
 
+                mIsShown = true;
+
                 if(mOnShowListener != null)
                     mOnShowListener.onShow(Tooltip.this);
-
-                mIsShown = true;
             }
         });
     }
@@ -153,10 +153,10 @@ public class Tooltip extends ViewGroup {
             mWindowManager.updateViewLayout(this, mWindowLayoutParams);
             mWindowManager.removeView(this);
 
+            mIsShown = false;
+
             if(mOnDismissListener != null)
                 mOnDismissListener.onDismiss(this);
-
-            mIsShown = false;
         }
 
         mIsDismissed = true;
@@ -166,7 +166,7 @@ public class Tooltip extends ViewGroup {
         locateTarget(new OnTargetExtractedListener() {
             @Override
             public void onTargetExtracted(boolean immediate, boolean visible, boolean changed) {
-                if(changed) {
+                if(changed && mIsShown && !mIsDismissed) {
                     calculateWindowPosition();
 
                     if(mVisible && !visible) {
