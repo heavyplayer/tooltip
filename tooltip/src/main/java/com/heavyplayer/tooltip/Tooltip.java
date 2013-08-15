@@ -19,6 +19,7 @@ import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -92,7 +93,7 @@ public class Tooltip extends ViewGroup {
         addView(mBalloonView, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
         // TODO: Configure the views here instead of having the values read from super (this).
 
-        setOnClickListener(new View.OnClickListener() {
+        View.OnClickListener onClickListener = new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(mOnClickListener != null)
@@ -100,7 +101,9 @@ public class Tooltip extends ViewGroup {
                 else
                     dismiss();
             }
-        });
+        };
+        mArrowView.setOnClickListener(onClickListener);
+        mBalloonView.setOnClickListener(onClickListener);
 
         locateTarget(new OnTargetExtractedListener() {
             @Override
@@ -542,6 +545,15 @@ public class Tooltip extends ViewGroup {
         // Lay out the views.
         mArrowView.layout(arrowLeft, arrowTop, arrowLeft + arrowWidth, arrowTop + arrowHeight);
         mBalloonView.layout(balloonLeft, balloonTop, balloonLeft + balloonWidth, balloonTop + balloonHeight);
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        // The OnClickListener is set on the child views, so all touch events that reach this view should be sent to the
+        // underlying activity. Before we do that, we need to adjust the coordinates.
+        event.offsetLocation(trim(mWindowPosition.x, 0, mDisplaySize.x), trim(mWindowPosition.y, 0, mDisplaySize.y));
+        mActivity.dispatchTouchEvent(event);
+        return false;
     }
 
     private void ensureChildrenMeasured() {
