@@ -11,7 +11,7 @@ apply plugin: 'android-library'
 
 dependencies {
     compile 'com.android.support:support-v4:19.0.+'
-    compile project(':Todoist:libraries:ActionBarSherlock:actionbarsherlock')
+    compile project(':libs:projects:ActionBarSherlock:actionbarsherlock')
 }
 
 android {
