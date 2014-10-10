@@ -13,8 +13,6 @@ import com.actionbarsherlock.view.MenuItem;
 import java.util.Random;
 
 public class ButtonsSherlockActivity extends SherlockActivity {
-    public static final String TAG = ButtonsActivity.class.getSimpleName();
-
     String mText = "A simple test tooltip";
     Menu mMenu;
 

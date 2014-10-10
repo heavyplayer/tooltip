@@ -13,8 +13,6 @@ import android.widget.LinearLayout;
 import java.util.Random;
 
 public class ButtonsActivity extends Activity {
-    public static final String TAG = ButtonsActivity.class.getSimpleName();
-
     String mText = "A simple test tooltip";
     Menu mMenu;
 
