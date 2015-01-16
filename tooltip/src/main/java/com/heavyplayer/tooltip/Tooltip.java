@@ -19,6 +19,8 @@ import android.os.Build;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -49,8 +51,7 @@ public class Tooltip extends ViewGroup {
     private Rect mTarget;
     private View mTargetView;
     private Integer mTargetX, mTargetY;
-    private android.view.Menu mMenu;
-    private com.actionbarsherlock.view.Menu mMenuSherlock;
+    private Menu mMenu;
     private int mMenuItemId;
 
     private int mGravity = Gravity.TOP;
@@ -219,32 +220,14 @@ public class Tooltip extends ViewGroup {
      * menu items, or the old bottom menus, the behaviour is undefined.
      */
     @TargetApi(Build.VERSION_CODES.HONEYCOMB)
-    public void setTarget(android.view.Menu menu, int menuItemId) {
-        android.view.MenuItem item = menu.findItem(menuItemId);
+    public void setTarget(Menu menu, int menuItemId) {
+        MenuItem item = menu.findItem(menuItemId);
         View actionView = item.getActionView();
         if(actionView != null) {
             setTarget(actionView);
         }
         else {
             mMenu = menu;
-            mMenuItemId = menuItemId;
-        }
-    }
-
-    /**
-     * Set the menu item targeted by this tooltip.
-     *
-     * Only visible Action Bar menu items are supported. When used with collapsed
-     * menu items, or the old bottom menus, the behaviour is undefined.
-     */
-    public void setTarget(com.actionbarsherlock.view.Menu menu, int menuItemId) {
-        com.actionbarsherlock.view.MenuItem item = menu.findItem(menuItemId);
-        View actionView = item.getActionView();
-        if(actionView != null) {
-            setTarget(actionView);
-        }
-        else {
-            mMenuSherlock = menu;
             mMenuItemId = menuItemId;
         }
     }
@@ -320,37 +303,12 @@ public class Tooltip extends ViewGroup {
             }
         }
         else if(mMenu != null) {
-            final android.view.MenuItem item = mMenu.findItem(mMenuItemId);
+            final MenuItem item = mMenu.findItem(mMenuItemId);
             if(item != null) {
                 final ViewGroup actionView = getActionView(item.getIcon());
 
                 if(actionView != null) {
                     item.setActionView(actionView);
-                    actionView.post(new Runnable() {
-                        @Override
-                        public void run() {
-                            locateTargetByView(actionView);
-
-                            if(onTargetExtractedListener != null)
-                                onTargetExtractedListener.onTargetExtracted(
-                                        false,
-                                        actionView.getLocalVisibleRect(new Rect()) && actionView.isShown(),
-                                        !mTarget.equals(previousTarget)
-                                );
-
-                            item.setActionView(null);
-                        }
-                    });
-                }
-            }
-        }
-        else if(mMenuSherlock != null) {
-            final com.actionbarsherlock.view.MenuItem item = mMenuSherlock.findItem(mMenuItemId);
-            if(item != null) {
-                final ViewGroup actionView = getActionView(item.getIcon());
-
-                item.setActionView(actionView);
-                if(actionView != null) {
                     actionView.post(new Runnable() {
                         @Override
                         public void run() {
@@ -375,7 +333,8 @@ public class Tooltip extends ViewGroup {
     }
 
     private ViewGroup getActionView(Drawable icon) {
-        ViewGroup actionView = (ViewGroup)mLayoutInflater.inflate(R.layout.ab_placeholder_item, new LinearLayout(mActivity), false);
+        ViewGroup actionView = (ViewGroup)mLayoutInflater.inflate(R.layout.ab_placeholder_item,
+                                                                  new LinearLayout(mActivity), false);
         if(actionView != null) {
             ImageView iconView = (ImageView)actionView.getChildAt(0);
             if(iconView != null)
@@ -571,7 +530,8 @@ public class Tooltip extends ViewGroup {
 
         if(balloonWidth == 0 || balloonHeight == 0) {
             int balloonWidthMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.x - arrowWidth, MeasureSpec.AT_MOST);
-            int balloonHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y - arrowHeight, MeasureSpec.AT_MOST);
+            int balloonHeightMeasureSpec = MeasureSpec.makeMeasureSpec(mDisplaySize.y - arrowHeight,
+                                                                       MeasureSpec.AT_MOST);
             measureChild(mBalloonView, balloonWidthMeasureSpec, balloonHeightMeasureSpec);
         }
     }
