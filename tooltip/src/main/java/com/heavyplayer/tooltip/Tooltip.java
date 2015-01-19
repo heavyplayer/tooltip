@@ -1,7 +1,6 @@
 package com.heavyplayer.tooltip;
 
 import android.annotation.SuppressLint;
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -219,7 +218,6 @@ public class Tooltip extends ViewGroup {
      * Only visible Action Bar menu items are supported. When used with collapsed
      * menu items, or the old bottom menus, the behaviour is undefined.
      */
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
     public void setTarget(Menu menu, int menuItemId) {
         MenuItem item = menu.findItem(menuItemId);
         View actionView = item.getActionView();
